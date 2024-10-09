@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "./Weather";
+
+service WeatherReporter {
+    rpc GetTodaysWeather(WeatherRequest) returns (WeatherReply) {}
+}
+
+message WeatherRequest {}
+
+message WeatherReply {
+    int64 temperature = 1;
+    int64 humidity = 2;
+    bool cloudy = 3;
+}
