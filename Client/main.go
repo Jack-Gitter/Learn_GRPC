@@ -4,6 +4,7 @@ import (
 	"GRPC_Weather_API/Weather"
 	"context"
 	"fmt"
+	"io"
 	"log"
 
 	"google.golang.org/grpc"
@@ -31,12 +32,29 @@ func main() {
 
     client := Weather.NewWeatherReporterClient(conn)
 
-    resp, err := client.GetTodaysWeather(context.Background(), nil)
+    resp, err := client.GetTodaysWeather(context.Background(), &Weather.WeatherRequest{})
 
     if err != nil {
         log.Fatal(err)
     }
 
     fmt.Println(resp)
+
+    readStream, err := client.GetPastTwoDaysWeatherServerStream(context.Background(), &Weather.TwoDaysWeatherRequest{})
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    for {
+        weatherReport, err := readStream.Recv()
+        if err == io.EOF {
+            break;
+        }
+        if err != nil {
+            log.Fatal(err)
+        }
+        log.Println(weatherReport)
+    }
 
 }
