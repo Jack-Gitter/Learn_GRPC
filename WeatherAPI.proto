@@ -4,12 +4,19 @@ option go_package = "./Weather";
 
 service WeatherReporter {
     rpc GetTodaysWeather(WeatherRequest) returns (WeatherReply) {}
+    rpc GetPastTwoDaysWeatherServerStream(TwoDaysWeatherRequest) returns (stream WeatherServerStreamReply) {}
 }
 
 message WeatherRequest {}
+message TwoDaysWeatherRequest {}
 
 message WeatherReply {
     int64 temperature = 1;
     int64 humidity = 2;
     bool cloudy = 3;
+}
+
+message WeatherServerStreamReply {
+    int64 UV = 1;
+    int64 percipitation = 2;
 }

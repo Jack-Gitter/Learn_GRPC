@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	WeatherReporter_GetTodaysWeather_FullMethodName = "/WeatherReporter/GetTodaysWeather"
+	WeatherReporter_GetTodaysWeather_FullMethodName                  = "/WeatherReporter/GetTodaysWeather"
+	WeatherReporter_GetPastTwoDaysWeatherServerStream_FullMethodName = "/WeatherReporter/GetPastTwoDaysWeatherServerStream"
 )
 
 // WeatherReporterClient is the client API for WeatherReporter service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type WeatherReporterClient interface {
 	GetTodaysWeather(ctx context.Context, in *WeatherRequest, opts ...grpc.CallOption) (*WeatherReply, error)
+	GetPastTwoDaysWeatherServerStream(ctx context.Context, in *TwoDaysWeatherRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WeatherServerStreamReply], error)
 }
 
 type weatherReporterClient struct {
@@ -47,11 +49,31 @@ func (c *weatherReporterClient) GetTodaysWeather(ctx context.Context, in *Weathe
 	return out, nil
 }
 
+func (c *weatherReporterClient) GetPastTwoDaysWeatherServerStream(ctx context.Context, in *TwoDaysWeatherRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WeatherServerStreamReply], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &WeatherReporter_ServiceDesc.Streams[0], WeatherReporter_GetPastTwoDaysWeatherServerStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[TwoDaysWeatherRequest, WeatherServerStreamReply]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type WeatherReporter_GetPastTwoDaysWeatherServerStreamClient = grpc.ServerStreamingClient[WeatherServerStreamReply]
+
 // WeatherReporterServer is the server API for WeatherReporter service.
 // All implementations must embed UnimplementedWeatherReporterServer
 // for forward compatibility.
 type WeatherReporterServer interface {
 	GetTodaysWeather(context.Context, *WeatherRequest) (*WeatherReply, error)
+	GetPastTwoDaysWeatherServerStream(*TwoDaysWeatherRequest, grpc.ServerStreamingServer[WeatherServerStreamReply]) error
 	mustEmbedUnimplementedWeatherReporterServer()
 }
 
@@ -64,6 +86,9 @@ type UnimplementedWeatherReporterServer struct{}
 
 func (UnimplementedWeatherReporterServer) GetTodaysWeather(context.Context, *WeatherRequest) (*WeatherReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTodaysWeather not implemented")
+}
+func (UnimplementedWeatherReporterServer) GetPastTwoDaysWeatherServerStream(*TwoDaysWeatherRequest, grpc.ServerStreamingServer[WeatherServerStreamReply]) error {
+	return status.Errorf(codes.Unimplemented, "method GetPastTwoDaysWeatherServerStream not implemented")
 }
 func (UnimplementedWeatherReporterServer) mustEmbedUnimplementedWeatherReporterServer() {}
 func (UnimplementedWeatherReporterServer) testEmbeddedByValue()                         {}
@@ -104,6 +129,17 @@ func _WeatherReporter_GetTodaysWeather_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WeatherReporter_GetPastTwoDaysWeatherServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(TwoDaysWeatherRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(WeatherReporterServer).GetPastTwoDaysWeatherServerStream(m, &grpc.GenericServerStream[TwoDaysWeatherRequest, WeatherServerStreamReply]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type WeatherReporter_GetPastTwoDaysWeatherServerStreamServer = grpc.ServerStreamingServer[WeatherServerStreamReply]
+
 // WeatherReporter_ServiceDesc is the grpc.ServiceDesc for WeatherReporter service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -116,6 +152,12 @@ var WeatherReporter_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _WeatherReporter_GetTodaysWeather_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetPastTwoDaysWeatherServerStream",
+			Handler:       _WeatherReporter_GetPastTwoDaysWeatherServerStream_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "WeatherAPI.proto",
 }
