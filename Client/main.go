@@ -7,8 +7,10 @@ import (
 	"io"
 	"log"
 
+	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 
@@ -21,11 +23,17 @@ func main() {
         log.Fatal(err)
     }
 
-    conn, err := grpc.NewClient("0.0.0.0:8080", grpc.WithTransportCredentials(creds))
+    perRPC := oauth.TokenSource{TokenSource: oauth2.StaticTokenSource(getOauthAccessToken()) }
+
+    opts := []grpc.DialOption{
+        grpc.WithPerRPCCredentials(perRPC),
+        grpc.WithTransportCredentials(creds),
+    }
+
+    conn, err := grpc.NewClient("0.0.0.0:8080", opts...) 
 
     if err != nil {
         log.Fatal(err)
-        log.Fatal("could not connect to server on port 8080")
     }
 
     defer conn.Close()
@@ -57,4 +65,10 @@ func main() {
         log.Println(weatherReport)
     }
 
+}
+
+func getOauthAccessToken() *oauth2.Token {
+    return &oauth2.Token{
+        AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJKYWNrIEdpdHRlciIsIm5hbWUiOiJUZXN0aW5nIEF1dGggdG9rZW5zISIsImlhdCI6OTUxNjIzOTAyMn0.tOf9G7H3QtMlbulEyL99HjqkEycd0jIHNRHODbCNxZg",
+    }
 }
